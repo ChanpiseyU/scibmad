@@ -112,14 +112,14 @@ import juliacall
 
 ## References
 
-Julia [https://julialang.org/]
-JuliaCall [https://pypi.org/project/juliacall/]
-PyTorch [https://pytorch.org/]
-DifferentiationInterface [https://github.com/JuliaDiff/DifferentiationInterface.jl]
-ForwardDiff.jl [https://github.com/JuliaDiff/ForwardDiff.jl]
+- Julia [https://julialang.org/]
+- JuliaCall [https://pypi.org/project/juliacall/]
+- PyTorch [https://pytorch.org/]
+- DifferentiationInterface [https://github.com/JuliaDiff/DifferentiationInterface.jl]
+- ForwardDiff.jl [https://github.com/JuliaDiff/ForwardDiff.jl]
 
 ## License
-This project is licensed under the MIT License. See LICENSE for details.
+This project is licensed under the MIT License. See [LICENSE](https://github.com/ChanpiseyU/scibmad/blob/main/LICENSE) for details.
  
 
 
