@@ -105,8 +105,9 @@ For more detailed tutorials and examples, see the [User Guide](scibmad/user_guid
 ```python 
 
 import scibmad 
-from juliacall import Main as jl, AnyValue 
+from juliacall import Main as jl
 import juliacall
+import torch 
 
 ```
 
