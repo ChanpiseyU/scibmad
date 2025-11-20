@@ -100,7 +100,15 @@ For more detailed tutorials and examples, see the [User Guide](scibmad/user_guid
 ## Troubleshooting / FAQ
 
 - Ensure Julia is installed and in your system PATH.
-- Import scibmad before all other modules. 
+- Import modules in the following order:
+
+```python 
+
+import scibmad 
+from juliacall import Main as jl, AnyValue 
+import juliacall
+
+```
 
 Support: [GitHubLink]
 
