@@ -88,7 +88,5 @@ def enable():
 
     juliacall.AnyValue.__call__ = _julia_torch_call
     _patched = True
-    print("✅ scibmad: PyTorch-Julia integration enabled")
-
-# Auto-enable by default
+ 
 enable()
