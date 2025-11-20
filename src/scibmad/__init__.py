@@ -1,5 +1,5 @@
 from juliacall import Main as jl
-from juliacall import AnyValue
+import juliacall
 import numpy as np
 import torch
 
@@ -62,19 +62,33 @@ class JuliaFunction(torch.autograd.Function):
             grad_output_np = grad_output.detach().cpu().numpy()
             grad = grad * grad_output_np
         
-        return torch.tensor(grad, dtype=x.dtype, device=x.device).reshape(x.shape), None)
+        return torch.tensor(grad, dtype=x.dtype, device=x.device).reshape(x.shape), None
 
-# Create Monkey Patch
-_original_call = AnyValue.__call__
+_original_call = None
+_patched = False
 
-def _julia_torch_call(self, *args, **kwargs):
-    has_torch_tensor =any(isinstance(arg, torch.Tensor) for arg in args)
+def enable():
+    """Enable automatic PyTorch tensor handling for Julia functions."""
+    global _original_call, _patched
     
-    if has_torch_tensor and len(args) == 1 and not kwargs:
-        x = args[0]
-        if isinstance(x, torch.Tensor):
-            return JuliaFunction.apply(x, self)
+    if _patched:
+        return
+    
+    _original_call = juliacall.AnyValue.__call__
 
-    return _original_call(self, *args, **kwargs)
+    def _julia_torch_call(self, *args, **kwargs):
+        has_torch_tensor = any(isinstance(arg, torch.Tensor) for arg in args)
+        
+        if has_torch_tensor and len(args) == 1 and not kwargs:
+            x = args[0]
+            if isinstance(x, torch.Tensor):
+                return JuliaFunction.apply(x, self)
 
-AnyValue.__call__ = _julia_torch_call
+        return _original_call(self, *args, **kwargs)
+
+    juliacall.AnyValue.__call__ = _julia_torch_call
+    _patched = True
+    print("✅ scibmad: PyTorch-Julia integration enabled")
+
+# Auto-enable by default
+enable()
