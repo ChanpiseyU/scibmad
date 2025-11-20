@@ -22,7 +22,7 @@ Scibmad is a Julia-PyTorch binding that combines the convenience and accuracy of
 You can install scibmad via:
 
 ``` bash
-pip install scibmad
+pip install git+https://github.com/ChanpiseyU/scibmad.git
 ```
 
 ### Additional dependencies:
@@ -109,8 +109,6 @@ from juliacall import Main as jl, AnyValue
 import juliacall
 
 ```
-
-Support: [GitHubLink]
 
 ## References
 
