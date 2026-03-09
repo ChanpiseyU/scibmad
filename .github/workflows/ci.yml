@@ -26,6 +26,10 @@ jobs:
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install juliacall numpy pytest
           pip install . --no-deps
+
+      - name: Install Julia packages
+        run: |
+          julia -e 'import Pkg; Pkg.add(["DifferentiationInterface", "ForwardDiff"])'
       
       - name: Debug
         run: |
