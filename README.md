@@ -102,7 +102,7 @@ For more detailed tutorials and examples, see the [User Guide](scibmad/user_guid
 ## Troubleshooting / FAQ
 
 - Ensure Julia is installed and in your system PATH.
-- Ensure 'scibmad.enable()' comes before any Julia calls
+- Ensure `scibmad.enable()` comes before any Julia calls
 - If gradients aren't flowing, ensure `requires_grad=True` is set on your tensors
 - Julia packages must be installed in your Julia environment before calling `using PackageName`
 - Import modules in the following order:
