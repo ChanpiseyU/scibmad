@@ -4,13 +4,6 @@ import juliacall
 import numpy as np
 import torch
 
-jl.seval("""
-using DifferentiationInterface
-import ForwardDiff
-
-const backend = AutoForwardDiff()
-""")
-
 # Implementation
 class JuliaFunction(torch.autograd.Function):
     
@@ -74,6 +67,13 @@ def enable():
     
     if _patched:
         return
+
+    jl.seval("""
+    using DifferentiationInterface
+    import ForwardDiff
+
+    const backend = AutoForwardDiff()
+    """)
     
     _original_call = juliacall.AnyValue.__call__
 
