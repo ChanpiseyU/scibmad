@@ -2,6 +2,9 @@
 ## Legendre Polynomial
 
 ``` python
+
+scibmad.enable()  # enables autograd through Julia functions
+
 jl.seval("""
 function legendre_p3(x)
     if x isa AbstractArray
@@ -34,9 +37,19 @@ for i in range(2000):
 
 ```
 
+# Legendre Polynomial Results 
+```
+Final loss: 8.9436
+Optimized: a=-0.0000, b=-2.2085, c=0.0000, d=0.2555
+```
+
+
 ## Bessel-Like Function Approximation
 
 ``` python 
+
+scibmad.enable()  # enables autograd through Julia functions
+
 jl.seval("""
 function bessel_approx(x)
     if x isa AbstractArray
@@ -69,3 +82,136 @@ for i in range(300):
     optimizer1.step()
 
 ```
+
+# Bessel-Like Function Approximation Results 
+```
+Final loss: 0.0478
+Optimized: scale=0.9997, shift=0.0012
+```
+
+## FODO Quadrupole Error Optimization 
+
+``` python
+
+import scibmad
+import juliacall
+import torch
+from juliacall import Main as jl
+import numpy as np
+
+scibmad.enable()  # enables autograd through Julia functions
+
+jl.seval("""
+using SciBmad
+using ForwardDiff
+using Random
+
+const backend = AutoForwardDiff()
+using DifferentiationInterface: gradient, jacobian, derivative
+
+Random.seed!(42) #reproducibility
+errors = -0.5 .+ 1.0 .* rand(2)  # 2 errors: one for QF, one for QD
+
+# Model beamline, what we think the machine looks like (no errors)
+qf_mod = Quadrupole(L = 0.5, Kn1 =  5.0)
+qd_mod = Quadrupole(L = 0.5, Kn1 = -5.0)
+
+fodo_mod = [qf_mod, Drift(L=1.0), qd_mod, Drift(L=1.0)]
+beam_mod = Beamline(fodo_mod, R_ref=-59.52872449027632, species_ref=Species("electron"))
+
+# Real beamline, the actual machine with unknown errors applied
+qf_real = Quadrupole(L = 0.5, Kn1 =  5.0 + errors[1])
+qd_real = Quadrupole(L = 0.5, Kn1 = -5.0 + errors[2])
+
+fodo_real = [qf_real, Drift(L=1.0), qd_real, Drift(L=1.0)]
+beam_real = Beamline(fodo_real, R_ref=-59.52872449027632, species_ref=Species("electron"))
+
+true_errors = errors[1:2]
+model_kn1 = [5.0, -5.0]
+
+initial_particle = [1e-3, 0.0, 1e-3, 0.0, 0.0, 0.0]
+
+function track_particle_mod()
+    coords_i = copy(initial_particle)
+    bunch = Bunch(coords_i, species=beam_mod.species_ref, R_ref=beam_mod.R_ref)
+    track!(bunch, beam_mod)
+    return [bunch.coords.v[1], bunch.coords.v[2], bunch.coords.v[3], bunch.coords.v[4]]
+end
+
+function track_particle_real()
+    coords_i = copy(initial_particle)
+    bunch = Bunch(coords_i, species=beam_real.species_ref, R_ref=beam_real.R_ref)
+    track!(bunch, beam_real)
+    return [bunch.coords.v[1], bunch.coords.v[2], bunch.coords.v[3], bunch.coords.v[4]]
+end
+
+function create_fodo_with_quads(kn1_array)
+    qf = Quadrupole(L = 0.5, Kn1 = kn1_array[1])
+    qd = Quadrupole(L = 0.5, Kn1 = kn1_array[2])
+    fodo = [qf, Drift(L=1.0), qd, Drift(L=1.0)]
+    return Beamline(fodo, R_ref=-59.52872449027632, species_ref=Species("electron"))
+end
+
+# Differentiable tracking, takes quad strengths as input so autograd can flow through
+function track_particle(kn1_array)
+    T = eltype(kn1_array) # Preserves dual number types for ForwardDiff
+    beamline = create_fodo_with_quads(kn1_array)
+    coords_i = T.(initial_particle)
+    bunch = Bunch(coords_i, species=beamline.species_ref, R_ref=beamline.R_ref)
+    track!(bunch, beamline)
+    return [bunch.coords.v[1], bunch.coords.v[2], bunch.coords.v[3], bunch.coords.v[4]]
+end
+""")
+
+# Track one particle through each beamline to get reference coordinates
+result_mod  = jl.track_particle_mod()
+result_real = jl.track_particle_real()
+
+# Convert Julia output to Python floats
+full_mod  = [float(v) for v in result_mod]
+full_real = [float(v) for v in result_real]
+
+true_errors_np  = np.array(jl.true_errors)
+model_kn1_np  = np.array(jl.model_kn1)
+real_kn1_np     = model_kn1_np + true_errors_np
+
+dtype = torch.float64
+lr = 1e-3  
+iterations = 10000 
+
+# Start optimizer from model quad strengths
+q1 = torch.tensor([model_kn1_np[0]], dtype=dtype, requires_grad=True)
+q2 = torch.tensor([model_kn1_np[1]], dtype=dtype, requires_grad=True)
+
+optimizer = torch.optim.Adam([q1, q2], lr=lr)
+
+def loss_function(kn1_tensor):
+    result = jl.track_particle(kn1_tensor)
+    loss = sum((result[i] - full_real[i]) ** 2 for i in range(4)) 
+    return loss
+
+for i in range(iterations):
+    optimizer.zero_grad()
+    kn1_array = torch.cat([q1, q2])
+    loss = loss_function(kn1_array)
+    loss.backward()
+    optimizer.step()
+  
+optimized_kn1 = torch.cat([q1, q2]).detach().numpy() 
+
+# Get recovered errors
+optimized_errors = optimized_kn1 - model_kn1_np
+
+```
+
+# FODO Quadrupole Error Optimization Results 
+
+| Quad | Model | Real (erroneous) | Optimized |
+|------|-------|-----------------|-----------|
+| QF   | 5.0000 | 5.1293        | 5.1293    |
+| QD   | -5.0000 | -5.0497      | -5.0497   |
+
+| Quad | True Error | Optimized Error | Difference |
+|------|-----------|----------------|------------|
+| QF   | 0.129345  | 0.129345       | 0.000000   |
+| QD   | -0.049661 | -0.049661      | 0.000000   |
