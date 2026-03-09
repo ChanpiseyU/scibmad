@@ -29,7 +29,7 @@ jobs:
 
       - name: Install Julia packages
         run: |
-          julia -e 'import Pkg; Pkg.add(["DifferentiationInterface", "ForwardDiff"])'
+          python -c "from juliacall import Main as jl; jl.seval('import Pkg; Pkg.add([\"DifferentiationInterface\", \"ForwardDiff\"])')"
       
       - name: Debug
         run: |
