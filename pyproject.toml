@@ -33,5 +33,4 @@ dev = ["pytest"]
 Homepage = "https://github.com/ChanpiseyU/scibmad"
 
 [tool.hatch.build.targets.wheel]
-source-directory = "src"
-packages = ["scibmad"]
+packages = ["src/scibmad"]
