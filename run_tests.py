@@ -1,4 +1,4 @@
-# localized tetsing script to run the simple tests in test_scibmad_simple.py
+# localized testing script to run the tests in test_newpatch.py
 
 import subprocess
 import sys
