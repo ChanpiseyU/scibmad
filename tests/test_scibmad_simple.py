@@ -1,15 +1,13 @@
 import pytest
-import juliacall
-from juliacall import Main as jl
+from scibmad import core as scibmad 
 import numpy as np
 import torch
-from scibmad import newpatch as scibmad
 
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_julia():
     """Define Julia test functions once for the whole session."""
-    jl.seval("""
+    scibmad.seval("""
     f_square(x) = x^2
     f_sum(arr) = sum(arr)
     f_linear(arr) = 2.0 .* arr
