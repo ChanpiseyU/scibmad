@@ -15,7 +15,16 @@ def _ensure_juliacall():
         )
         print("[scibmad] juliacall installed successfully.")
 
+def _ensure_scibmad():
+    try:
+        jl.seval("using SciBmad")
+    except Exception:
+        print("[scibmad] SciBmad not found — installing Julia package...")
+        jl.seval('import Pkg; Pkg.add("SciBmad")')
+        jl.seval("using SciBmad")
+        print("[scibmad] SciBmad installed successfully.")
 
+_ensure_scibmad()
 _ensure_juliacall()
 
 import juliacall
