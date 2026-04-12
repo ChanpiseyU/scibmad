@@ -1,4 +1,5 @@
 import pytest
+import scibmad as scibmad_pkg
 from scibmad import core as scibmad 
 import numpy as np
 import torch
@@ -7,11 +8,13 @@ import torch
 @pytest.fixture(scope="session", autouse=True)
 def setup_julia():
     """Define Julia test functions once for the whole session."""
-    scibmad.seval("""
+    scibmad.define("""
     f_square(x) = x^2
     f_sum(arr) = sum(arr)
     f_linear(arr) = 2.0 .* arr
     f_multi_output(x) = [x, x^2, x^3]
+    f_scaled_sum(scale, arr) = scale * sum(arr)
+    f_dot_sum(a, b) = sum(a .* b)
     """)
 
 
@@ -21,6 +24,13 @@ def test_scalar_function():
     """A simple Julia scalar function should return the correct value"""
     x = torch.tensor(3.0, dtype=torch.float64)
     result = float(scibmad.f_square(x))
+    assert result == pytest.approx(9.0)
+
+
+def test_top_level_julia_function():
+    """Julia functions should be available as scibmad.<function_name>."""
+    x = torch.tensor(3.0, dtype=torch.float64)
+    result = float(scibmad_pkg.f_square(x))
     assert result == pytest.approx(9.0)
 
 
@@ -88,3 +98,24 @@ def test_gradient_array():
     result.backward()
     assert arr.grad is not None
     np.testing.assert_allclose(arr.grad.numpy(), np.ones(3))
+
+
+def test_gradient_with_fixed_arg():
+    """Fixed Julia/Python args should pass through while tensor args get gradients."""
+    arr = torch.tensor([1.0, 2.0, 3.0], dtype=torch.float64, requires_grad=True)
+    result = scibmad.f_scaled_sum(2.5, arr)
+    result.backward()
+    assert arr.grad is not None
+    np.testing.assert_allclose(arr.grad.numpy(), np.full(3, 2.5))
+
+
+def test_gradient_with_multiple_tensor_args():
+    """Multiple tensor arguments should each receive gradients."""
+    a = torch.tensor([1.0, 2.0, 3.0], dtype=torch.float64, requires_grad=True)
+    b = torch.tensor([4.0, 5.0, 6.0], dtype=torch.float64, requires_grad=True)
+    result = scibmad.f_dot_sum(a, b)
+    result.backward()
+    assert a.grad is not None
+    assert b.grad is not None
+    np.testing.assert_allclose(a.grad.numpy(), b.detach().numpy())
+    np.testing.assert_allclose(b.grad.numpy(), a.detach().numpy())

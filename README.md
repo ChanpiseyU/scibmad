@@ -1,78 +1,98 @@
+# Scibmad – PyTorch/Julia Binding 
 
-# Scibmad
+## Overview
 
-## What is scibmad?
+This repository provides the **PyTorch ↔ Julia automatic differentiation bridge** used within the broader Scibmad ecosystem.
 
-Scibmad is a Julia-PyTorch binding that combines the convenience and accuracy of Julia-based automatic differentiation with the flexibility and ecosystem of PyTorch. 
+It enables seamless integration of:
+- Julia-based scientific computing and AD (via ForwardDiff / DifferentiationInterface)
+- PyTorch’s optimization and machine learning workflows
 
-## Supported Platforms
+---
 
-- Python 3.10+
-- Julia 1.9+
-- macOS, Linux, Windows
+## Role in the Scibmad Ecosystem
+
+Within the full Scibmad stack, this module is responsible for:
+
+- Bridging Python tensors ↔ Julia arrays  
+- Enabling PyTorch autograd compatibility with Julia functions  
+- Handling forward and backward passes across language boundaries  
+- Providing differentiable wrappers for Julia-based physics routines  
+
+---
+
+## Requirements
+
+- Python 3.10+  
+- Julia 1.9+  
+- macOS, Linux, or Windows  
+
+---
 
 ## Installation
 
-You can install scibmad via:
+This module is typically installed as part of the main Scibmad package.
 
-``` bash
+For development or standalone testing:
+
+```bash
 pip install git+https://github.com/ChanpiseyU/scibmad.git
 ```
 
-### Additional dependencies:
+## Additional Dependencies 
 
-- PyTorch (for optimization routines):
+- PyTorch 
+``` bash 
+pip install torch
+```
 
+- Julia AD dependencies 
 ``` bash
-pip install torch 
-```
-
-- DifferentiationInterface (for Julia AD):
-```bash
 jl.seval('using Pkg; Pkg.add("DifferentiationInterface")')
-```
-
-- ForwardDiff (AD Backend):
-```bash 
 jl.seval('using Pkg; Pkg.add("ForwardDiff")')
 ```
 
-## Getting Started
-1. Install the project and dependencies (see Installation).
-2. Import or define your Julia module via JuliaCall in Python.
-3. Use Julia’s optimized functions in PyTorch workflows.
+## Usage Context 
 
-
-## Examples
-
-For detailed examples on using scibmad for torch optimization, see the [User Guide](scibmad/user_guide.md).
-
-
-## Troubleshooting / FAQ
-
-- Ensure `scibmad.seval()` is used to define Julia functions
-- If gradients aren't flowing, ensure `requires_grad=True` is set on your tensors
-- Julia packages must be installed in your Julia environment before calling `using PackageName`
-- Import modules in the following order:
-
-```python 
-
+Typical usage patterns:
+``` python 
 from scibmad import core as scibmad
-import torch 
-
+import torch
 ```
 
-## References
+Julia functions are defined byL
+```python 
+scibmad.define("function f(x); return x^2; end")
+```
+and can then be used directly in PyTorch optimization loops with autograd support.
 
-- Julia [https://julialang.org/]
-- JuliaCall [https://pypi.org/project/juliacall/]
-- PyTorch [https://pytorch.org/]
-- DifferentiationInterface [https://github.com/JuliaDiff/DifferentiationInterface.jl]
-- ForwardDiff.jl [https://github.com/JuliaDiff/ForwardDiff.jl]
+## Key features 
 
-## License
-This project is licensed under the MIT License. See [LICENSE](https://github.com/ChanpiseyU/scibmad/blob/main/LICENSE) for details.
- 
+- Cross-language automatic differentiation 
+- PyTorch-compatible autograd interface
+- Transparent tensor ↔ Julia type conversion
+- Support for scalar and array-valued functions
+- Designed for high-performance scientific computing workflows
 
+## Notes 
 
+- Import order matters:
+``` python
+from scibmad import core as scibmad
+import torch
+```
 
+- Ensure:
+    - requires_grad=True is set for optimization
+    - Julia packages are installed before use
+    - Functions are defined in Julia before calling them
+
+## References: 
+- [Julia](https://julialang.org/)
+- [JuliaCall](https://pypi.org/project/juliacall/)
+- [PyTorch](https://pytorch.org/)
+- [DifferentiationInterface](https://github.com/JuliaDiff/DifferentiationInterface.jl)
+- [ForwardDiff](https://github.com/JuliaDiff/ForwardDiff.jl)
+
+## License 
+MIT License — see the main Scibmad repository for details.
