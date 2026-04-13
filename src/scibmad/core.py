@@ -15,6 +15,8 @@ def _ensure_juliacall():
         )
         print("[scibmad] juliacall installed successfully.")
 
+_ensure_juliacall()
+
 def _ensure_scibmad():
     try:
         jl.seval("using SciBmad")
@@ -25,7 +27,6 @@ def _ensure_scibmad():
         print("[scibmad] SciBmad installed successfully.")
 
 _ensure_scibmad()
-_ensure_juliacall()
 
 import juliacall
 from juliacall import Main as jl
