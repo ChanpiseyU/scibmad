@@ -17,6 +17,9 @@ def _ensure_juliacall():
 
 _ensure_juliacall()
 
+import juliacall
+from juliacall import Main as jl
+
 def _ensure_scibmad():
     try:
         jl.seval("using SciBmad")
@@ -27,9 +30,6 @@ def _ensure_scibmad():
         print("[scibmad] SciBmad installed successfully.")
 
 _ensure_scibmad()
-
-import juliacall
-from juliacall import Main as jl
 
 import numpy as np
 import torch
