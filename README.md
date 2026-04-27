@@ -1,98 +1,102 @@
-# Scibmad – PyTorch/Julia Binding 
+# scibmad
 
-## Overview
+`scibmad` is a bridge between PyTorch and Julia for differentiable scientific workflows. It lets you define or load Julia functions, call them from Python, and keep gradients flowing through PyTorch autograd.
 
-This repository provides the **PyTorch ↔ Julia automatic differentiation bridge** used within the broader Scibmad ecosystem.
+## What it provides
 
-It enables seamless integration of:
-- Julia-based scientific computing and AD (via ForwardDiff / DifferentiationInterface)
-- PyTorch’s optimization and machine learning workflows
-
----
-
-## Role in the Scibmad Ecosystem
-
-Within the full Scibmad stack, this module is responsible for:
-
-- Bridging Python tensors ↔ Julia arrays  
-- Enabling PyTorch autograd compatibility with Julia functions  
-- Handling forward and backward passes across language boundaries  
-- Providing differentiable wrappers for Julia-based physics routines  
-
----
+- PyTorch tensor to Julia value conversion
+- Autograd-aware wrappers for Julia functions
+- Beamline helpers for SciBmad element tracking
+- A small Python API for loading Julia code into `Main`
 
 ## Requirements
 
-- Python 3.10+  
-- Julia 1.9+  
-- macOS, Linux, or Windows  
-
----
+- Python 3.11+
+- Julia 1.9+
+- A working SciBmad-compatible Julia environment
 
 ## Installation
 
-This module is typically installed as part of the main Scibmad package.
-
-For development or standalone testing:
+Install the package:
 
 ```bash
 pip install git+https://github.com/ChanpiseyU/scibmad.git
 ```
 
-## Additional Dependencies 
+Core Python dependencies:
 
-- PyTorch 
-``` bash 
-pip install torch
+```bash
+pip install torch juliacall numpy
 ```
 
-- Julia AD dependencies 
-``` bash
-jl.seval('using Pkg; Pkg.add("DifferentiationInterface")')
-jl.seval('using Pkg; Pkg.add("ForwardDiff")')
-```
+If your Julia environment does not already include the required packages, `scibmad` will bootstrap `SciBmad` during initialization.
 
-## Usage Context 
+## Quick Start
 
-Typical usage patterns:
-``` python 
+```python
 from scibmad import core as scibmad
 import torch
+
+scibmad.define(
+    """
+    f_square(x) = x^2
+    f_scaled_sum(scale, arr) = scale * sum(arr)
+    """
+)
+
+x = torch.tensor(3.0, dtype=torch.float64, requires_grad=True)
+y = scibmad.f_square(x)
+y.backward()
+
+print(float(y))      # 9.0
+print(float(x.grad)) # 6.0
 ```
 
-Julia functions are defined byL
-```python 
-scibmad.define("function f(x); return x^2; end")
-```
-and can then be used directly in PyTorch optimization loops with autograd support.
+## Beamline Example
 
-## Key features 
-
-- Cross-language automatic differentiation 
-- PyTorch-compatible autograd interface
-- Transparent tensor ↔ Julia type conversion
-- Support for scalar and array-valued functions
-- Designed for high-performance scientific computing workflows
-
-## Notes 
-
-- Import order matters:
-``` python
+```python
 from scibmad import core as scibmad
 import torch
+
+coords = torch.tensor(
+    [1e-3, 0.0, 1e-3, 0.0, 0.0, 0.0],
+    dtype=torch.float64,
+    requires_grad=True,
+)
+
+line = scibmad.beamline(
+    scibmad.drift_ele(1.0, R_ref=2.0),
+    scibmad.quadrupole_ele(0.5, 1.2, R_ref=2.0),
+)
+
+result = line(coords)
+loss = result.sum()
+loss.backward()
 ```
 
-- Ensure:
-    - requires_grad=True is set for optimization
-    - Julia packages are installed before use
-    - Functions are defined in Julia before calling them
+## Public API
 
-## References: 
+- `scibmad.define(code)` evaluates Julia code in `Main`
+- `scibmad.load(path)` includes a Julia source file
+- `scibmad.seval(code)` evaluates arbitrary Julia expressions
+- `scibmad.using(*packages)` loads Julia packages with `using`
+- Julia functions defined in `Main` become available as `scibmad.<name>`
+
+## Development
+
+Run the focused test suite with:
+
+```bash
+python run_tests.py
+```
+
+## References
+
 - [Julia](https://julialang.org/)
 - [JuliaCall](https://pypi.org/project/juliacall/)
 - [PyTorch](https://pytorch.org/)
-- [DifferentiationInterface](https://github.com/JuliaDiff/DifferentiationInterface.jl)
-- [ForwardDiff](https://github.com/JuliaDiff/ForwardDiff.jl)
+- [SciBmad](https://github.com/bmad-sim/SciBmad.jl)
 
-## License 
-MIT License — see the main Scibmad repository for details.
+## License
+
+MIT

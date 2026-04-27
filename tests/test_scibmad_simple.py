@@ -119,3 +119,39 @@ def test_gradient_with_multiple_tensor_args():
     assert b.grad is not None
     np.testing.assert_allclose(a.grad.numpy(), b.detach().numpy())
     np.testing.assert_allclose(b.grad.numpy(), a.detach().numpy())
+
+
+def test_reference_rigidity_positional_arg_keeps_autograd_path():
+    """R_ref can be passed positionally while tensor coordinates stay differentiable."""
+    coords = torch.tensor(
+        [1e-3, 0.0, 1e-3, 0.0, 0.0, 0.0],
+        dtype=torch.float64,
+        requires_grad=True,
+    )
+
+    result = scibmad.quadrupole(coords, 0.5, 1.2, 2.0)
+    loss = result.sum()
+    loss.backward()
+
+    assert coords.grad is not None
+    assert torch.all(torch.isfinite(coords.grad))
+
+
+def test_beamline_elements_accept_reference_rigidity():
+    """Element constructors can store R_ref for differentiable beamline tracking."""
+    coords = torch.tensor(
+        [1e-3, 0.0, 1e-3, 0.0, 0.0, 0.0],
+        dtype=torch.float64,
+        requires_grad=True,
+    )
+    beamline = scibmad.beamline(
+        scibmad.drift_ele(1.0, R_ref=2.0),
+        scibmad.quadrupole_ele(0.5, 1.2, R_ref=2.0),
+    )
+
+    result = beamline(coords)
+    loss = result.sum()
+    loss.backward()
+
+    assert coords.grad is not None
+    assert torch.all(torch.isfinite(coords.grad))
