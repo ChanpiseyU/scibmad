@@ -53,32 +53,32 @@ class _JuliaProxy(types.ModuleType):
     def beamline(self, *elements):
         return BeamlineSpec(elements)
 
-    def quadrupole_ele(self, L, Kn1):
-        return ElementSpec("quadrupole", L, Kn1)
+    def quadrupole_ele(self, L, Kn1, R_ref=1.0):
+        return ElementSpec("quadrupole", L, Kn1, R_ref)
 
-    def drift_ele(self, L):
-        return ElementSpec("drift", L)
+    def drift_ele(self, L, R_ref=1.0):
+        return ElementSpec("drift", L, R_ref)
 
-    def sbend_ele(self, L, angle):
-        return ElementSpec("sbend", L, angle)
+    def sbend_ele(self, L, angle, R_ref=1.0):
+        return ElementSpec("sbend", L, angle, R_ref)
 
-    def sextupole_ele(self, L, Kn2):
-        return ElementSpec("sextupole", L, Kn2)
+    def sextupole_ele(self, L, Kn2, R_ref=1.0):
+        return ElementSpec("sextupole", L, Kn2, R_ref)
 
-    def octupole_ele(self, L, Kn3):
-        return ElementSpec("octupole", L, Kn3)
+    def octupole_ele(self, L, Kn3, R_ref=1.0):
+        return ElementSpec("octupole", L, Kn3, R_ref)
 
-    def solenoid_ele(self, L, Ksol):
-        return ElementSpec("solenoid", L, Ksol)
+    def solenoid_ele(self, L, Ksol, R_ref=1.0):
+        return ElementSpec("solenoid", L, Ksol, R_ref)
 
-    def hkicker_ele(self, L, Kn0):
-        return ElementSpec("hkicker", L, Kn0)
+    def hkicker_ele(self, L, Kn0, R_ref=1.0):
+        return ElementSpec("hkicker", L, Kn0, R_ref)
 
-    def vkicker_ele(self, L, Ks0):
-        return ElementSpec("vkicker", L, Ks0)
+    def vkicker_ele(self, L, Ks0, R_ref=1.0):
+        return ElementSpec("vkicker", L, Ks0, R_ref)
 
-    def rfcavity_ele(self, L, voltage, frequency, phase):
-        return ElementSpec("rfcavity", L, voltage, frequency, phase)
+    def rfcavity_ele(self, L, voltage, frequency, phase, R_ref=1.0):
+        return ElementSpec("rfcavity", L, voltage, frequency, phase, R_ref)
 
     def seval(self, code: str):
         return jl.seval(code)
