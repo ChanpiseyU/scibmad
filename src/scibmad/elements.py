@@ -9,7 +9,7 @@ function _scibmad_track_ele(coords, ele::LineElement;
     v = Matrix{T}(undef, 1, 6)
     v[1, :] .= coordsT
 
-    bunch = Bunch(v; species=species, p_over_q_ref=T(R_ref))
+    bunch = Bunch(v; species=species, R_ref=T(R_ref))
     track!(bunch, ele)
     return vec(bunch.coords.v[1, :])
 end
