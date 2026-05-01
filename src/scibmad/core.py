@@ -25,9 +25,14 @@ def _ensure_scibmad():
         jl.seval("using SciBmad")
     except Exception:
         print("[scibmad] SciBmad not found — installing Julia package...")
-        jl.seval('import Pkg; Pkg.add("SciBmad")')
-        jl.seval("using SciBmad")
-        print("[scibmad] SciBmad installed successfully.")
+        try:
+            jl.seval('import Pkg; Pkg.add("SciBmad")')
+            jl.seval("using SciBmad")
+            print("[scibmad] SciBmad installed successfully.")
+        except Exception as exc:
+            raise RuntimeError(
+                "SciBmad could not be loaded or installed automatically."
+            ) from exc
 
 _ensure_scibmad()
 
@@ -53,32 +58,45 @@ class _JuliaProxy(types.ModuleType):
     def beamline(self, *elements):
         return BeamlineSpec(elements)
 
-    def quadrupole_ele(self, L, Kn1, R_ref=1.0):
-        return ElementSpec("quadrupole", L, Kn1, R_ref)
+    def _call_julia(self, name, *args, **kwargs):
+        attr = getattr(self.__dict__["_jl"], name)
+        if isinstance(attr, self.__dict__["_juliacall"].AnyValue) and callable(attr):
+            attr = _JuliaTorchCallable(attr)
+        return attr(*args, **kwargs)
 
-    def drift_ele(self, L, R_ref=1.0):
-        return ElementSpec("drift", L, R_ref)
+    def _build_or_call(self, kind, build_arg_counts, *args, **kwargs):
+        if len(args) in build_arg_counts and set(kwargs).issubset({"p_over_q_ref"}):
+            if "p_over_q_ref" in kwargs:
+                return ElementSpec(kind, *args, kwargs["p_over_q_ref"])
+            return ElementSpec(kind, *args)
+        return self._call_julia(kind, *args, **kwargs)
 
-    def sbend_ele(self, L, angle, R_ref=1.0):
-        return ElementSpec("sbend", L, angle, R_ref)
+    def quadrupole(self, *args, **kwargs):
+        return self._build_or_call("quadrupole", (2, 3), *args, **kwargs)
 
-    def sextupole_ele(self, L, Kn2, R_ref=1.0):
-        return ElementSpec("sextupole", L, Kn2, R_ref)
+    def drift(self, *args, **kwargs):
+        return self._build_or_call("drift", (1, 2), *args, **kwargs)
 
-    def octupole_ele(self, L, Kn3, R_ref=1.0):
-        return ElementSpec("octupole", L, Kn3, R_ref)
+    def sbend(self, *args, **kwargs):
+        return self._build_or_call("sbend", (2, 3), *args, **kwargs)
 
-    def solenoid_ele(self, L, Ksol, R_ref=1.0):
-        return ElementSpec("solenoid", L, Ksol, R_ref)
+    def sextupole(self, *args, **kwargs):
+        return self._build_or_call("sextupole", (2, 3), *args, **kwargs)
 
-    def hkicker_ele(self, L, Kn0, R_ref=1.0):
-        return ElementSpec("hkicker", L, Kn0, R_ref)
+    def octupole(self, *args, **kwargs):
+        return self._build_or_call("octupole", (2, 3), *args, **kwargs)
 
-    def vkicker_ele(self, L, Ks0, R_ref=1.0):
-        return ElementSpec("vkicker", L, Ks0, R_ref)
+    def solenoid(self, *args, **kwargs):
+        return self._build_or_call("solenoid", (2, 3), *args, **kwargs)
 
-    def rfcavity_ele(self, L, voltage, frequency, phase, R_ref=1.0):
-        return ElementSpec("rfcavity", L, voltage, frequency, phase, R_ref)
+    def hkicker(self, *args, **kwargs):
+        return self._build_or_call("hkicker", (2, 3), *args, **kwargs)
+
+    def vkicker(self, *args, **kwargs):
+        return self._build_or_call("vkicker", (2, 3), *args, **kwargs)
+
+    def rfcavity(self, *args, **kwargs):
+        return self._build_or_call("rfcavity", (4, 5), *args, **kwargs)
 
     def seval(self, code: str):
         return jl.seval(code)

@@ -100,10 +100,10 @@ target = torch.tensor(
 
 def make_line(kn1):
     return scibmad.beamline(
-        scibmad.quadrupole_ele(0.5, kn1[0]),
-        scibmad.drift_ele(1.0),
-        scibmad.quadrupole_ele(0.5, kn1[1]),
-        scibmad.drift_ele(1.0),
+        scibmad.quadrupole(0.5, kn1[0]),
+        scibmad.drift(1.0),
+        scibmad.quadrupole(0.5, kn1[1]),
+        scibmad.drift(1.0),
     )
 
 def track_particle(coords, kn1):

@@ -65,8 +65,8 @@ coords = torch.tensor(
 )
 
 line = scibmad.beamline(
-    scibmad.drift_ele(1.0, R_ref=2.0),
-    scibmad.quadrupole_ele(0.5, 1.2, R_ref=2.0),
+    scibmad.drift(1.0, p_over_q_ref=2.0),
+    scibmad.quadrupole(0.5, 1.2, p_over_q_ref=2.0),
 )
 
 result = line(coords)

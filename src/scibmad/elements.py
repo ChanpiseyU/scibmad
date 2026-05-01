@@ -1,124 +1,129 @@
 ELEMENT_JULIA_CODE = """
 using SciBmad
+using Beamlines
+using BeamTracking
+using BeamTracking
 
 function _scibmad_track_ele(coords, ele::LineElement;
-                            species=Species("electron"), R_ref=1.0)
-    T = promote_type(eltype(coords), typeof(R_ref))
+                            species=Species("electron"), p_over_q_ref=1.0)
+    T = promote_type(eltype(coords), typeof(p_over_q_ref))
     coordsT = T.(coords)
+    p_over_q_ref = sign(chargeof(species)) * abs(T(p_over_q_ref))
 
     v = Matrix{T}(undef, 1, 6)
     v[1, :] .= coordsT
 
-    bunch = Bunch(v; species=species, p_over_q_ref=T(R_ref))
-    track!(bunch, ele)
+    bl = Beamline([ele]; species_ref=species, p_over_q_ref=p_over_q_ref)
+    bunch = Bunch(v; species=bl.species_ref, p_over_q_ref=bl.p_over_q_ref)
+    track!(bunch, bl; scalar_params=true)
     return vec(bunch.coords.v[1, :])
 end
 
-function quadrupole(coords, L::Real, Kn1::Real, R_ref::Real;
+function quadrupole(coords, L::Real, Kn1::Real, p_over_q_ref::Real;
                     species=Species("electron"))
-    T = promote_type(eltype(coords), typeof(L), typeof(Kn1), typeof(R_ref))
+    T = promote_type(eltype(coords), typeof(L), typeof(Kn1), typeof(p_over_q_ref))
     ele = Quadrupole(L=T(L), Kn1=T(Kn1))
-    return _scibmad_track_ele(T.(coords), ele; species=species, R_ref=T(R_ref))
+    return _scibmad_track_ele(T.(coords), ele; species=species, p_over_q_ref=T(p_over_q_ref))
 end
 
 function quadrupole(coords, L::Real, Kn1::Real;
-                    species=Species("electron"), R_ref=1.0)
-    return quadrupole(coords, L, Kn1, R_ref; species=species)
+                    species=Species("electron"), p_over_q_ref=1.0)
+    return quadrupole(coords, L, Kn1, p_over_q_ref; species=species)
 end
 
-function drift(coords, L::Real, R_ref::Real;
+function drift(coords, L::Real, p_over_q_ref::Real;
                species=Species("electron"))
-    T = promote_type(eltype(coords), typeof(L), typeof(R_ref))
+    T = promote_type(eltype(coords), typeof(L), typeof(p_over_q_ref))
     ele = Drift(L=T(L))
-    return _scibmad_track_ele(T.(coords), ele; species=species, R_ref=T(R_ref))
+    return _scibmad_track_ele(T.(coords), ele; species=species, p_over_q_ref=T(p_over_q_ref))
 end
 
 function drift(coords, L::Real;
-               species=Species("electron"), R_ref=1.0)
-    return drift(coords, L, R_ref; species=species)
+               species=Species("electron"), p_over_q_ref=1.0)
+    return drift(coords, L, p_over_q_ref; species=species)
 end
 
-function sbend(coords, L::Real, angle::Real, R_ref::Real;
+function sbend(coords, L::Real, angle::Real, p_over_q_ref::Real;
                species=Species("electron"))
-    T = promote_type(eltype(coords), typeof(L), typeof(angle), typeof(R_ref))
+    T = promote_type(eltype(coords), typeof(L), typeof(angle), typeof(p_over_q_ref))
     ele = SBend(L=T(L), angle=T(angle))
-    return _scibmad_track_ele(T.(coords), ele; species=species, R_ref=T(R_ref))
+    return _scibmad_track_ele(T.(coords), ele; species=species, p_over_q_ref=T(p_over_q_ref))
 end
 
 function sbend(coords, L::Real, angle::Real;
-               species=Species("electron"), R_ref=1.0)
-    return sbend(coords, L, angle, R_ref; species=species)
+               species=Species("electron"), p_over_q_ref=1.0)
+    return sbend(coords, L, angle, p_over_q_ref; species=species)
 end
 
-function sextupole(coords, L::Real, Kn2::Real, R_ref::Real;
+function sextupole(coords, L::Real, Kn2::Real, p_over_q_ref::Real;
                    species=Species("electron"))
-    T = promote_type(eltype(coords), typeof(L), typeof(Kn2), typeof(R_ref))
+    T = promote_type(eltype(coords), typeof(L), typeof(Kn2), typeof(p_over_q_ref))
     ele = Sextupole(L=T(L), Kn2=T(Kn2))
-    return _scibmad_track_ele(T.(coords), ele; species=species, R_ref=T(R_ref))
+    return _scibmad_track_ele(T.(coords), ele; species=species, p_over_q_ref=T(p_over_q_ref))
 end
 
 function sextupole(coords, L::Real, Kn2::Real;
-                   species=Species("electron"), R_ref=1.0)
-    return sextupole(coords, L, Kn2, R_ref; species=species)
+                   species=Species("electron"), p_over_q_ref=1.0)
+    return sextupole(coords, L, Kn2, p_over_q_ref; species=species)
 end
 
-function octupole(coords, L::Real, Kn3::Real, R_ref::Real;
+function octupole(coords, L::Real, Kn3::Real, p_over_q_ref::Real;
                   species=Species("electron"))
-    T = promote_type(eltype(coords), typeof(L), typeof(Kn3), typeof(R_ref))
+    T = promote_type(eltype(coords), typeof(L), typeof(Kn3), typeof(p_over_q_ref))
     ele = Octupole(L=T(L), Kn3=T(Kn3))
-    return _scibmad_track_ele(T.(coords), ele; species=species, R_ref=T(R_ref))
+    return _scibmad_track_ele(T.(coords), ele; species=species, p_over_q_ref=T(p_over_q_ref))
 end
 
 function octupole(coords, L::Real, Kn3::Real;
-                  species=Species("electron"), R_ref=1.0)
-    return octupole(coords, L, Kn3, R_ref; species=species)
+                  species=Species("electron"), p_over_q_ref=1.0)
+    return octupole(coords, L, Kn3, p_over_q_ref; species=species)
 end
 
-function solenoid(coords, L::Real, Ksol::Real, R_ref::Real;
+function solenoid(coords, L::Real, Ksol::Real, p_over_q_ref::Real;
                   species=Species("electron"))
-    T = promote_type(eltype(coords), typeof(L), typeof(Ksol), typeof(R_ref))
+    T = promote_type(eltype(coords), typeof(L), typeof(Ksol), typeof(p_over_q_ref))
     ele = Solenoid(L=T(L), Ksol=T(Ksol))
-    return _scibmad_track_ele(T.(coords), ele; species=species, R_ref=T(R_ref))
+    return _scibmad_track_ele(T.(coords), ele; species=species, p_over_q_ref=T(p_over_q_ref))
 end
 
 function solenoid(coords, L::Real, Ksol::Real;
-                  species=Species("electron"), R_ref=1.0)
-    return solenoid(coords, L, Ksol, R_ref; species=species)
+                  species=Species("electron"), p_over_q_ref=1.0)
+    return solenoid(coords, L, Ksol, p_over_q_ref; species=species)
 end
 
-function hkicker(coords, L::Real, Kn0::Real, R_ref::Real;
+function hkicker(coords, L::Real, Kn0::Real, p_over_q_ref::Real;
                  species=Species("electron"))
-    T = promote_type(eltype(coords), typeof(L), typeof(Kn0), typeof(R_ref))
+    T = promote_type(eltype(coords), typeof(L), typeof(Kn0), typeof(p_over_q_ref))
     ele = HKicker(L=T(L), Kn0=T(Kn0))
-    return _scibmad_track_ele(T.(coords), ele; species=species, R_ref=T(R_ref))
+    return _scibmad_track_ele(T.(coords), ele; species=species, p_over_q_ref=T(p_over_q_ref))
 end
 
 function hkicker(coords, L::Real, Kn0::Real;
-                 species=Species("electron"), R_ref=1.0)
-    return hkicker(coords, L, Kn0, R_ref; species=species)
+                 species=Species("electron"), p_over_q_ref=1.0)
+    return hkicker(coords, L, Kn0, p_over_q_ref; species=species)
 end
 
-function vkicker(coords, L::Real, Ks0::Real, R_ref::Real;
+function vkicker(coords, L::Real, Ks0::Real, p_over_q_ref::Real;
                  species=Species("electron"))
-    T = promote_type(eltype(coords), typeof(L), typeof(Ks0), typeof(R_ref))
+    T = promote_type(eltype(coords), typeof(L), typeof(Ks0), typeof(p_over_q_ref))
     ele = VKicker(L=T(L), Ks0=T(Ks0))
-    return _scibmad_track_ele(T.(coords), ele; species=species, R_ref=T(R_ref))
+    return _scibmad_track_ele(T.(coords), ele; species=species, p_over_q_ref=T(p_over_q_ref))
 end
 
 function vkicker(coords, L::Real, Ks0::Real;
-                 species=Species("electron"), R_ref=1.0)
-    return vkicker(coords, L, Ks0, R_ref; species=species)
+                 species=Species("electron"), p_over_q_ref=1.0)
+    return vkicker(coords, L, Ks0, p_over_q_ref; species=species)
 end
 
 function rfcavity(coords, L::Real, voltage::Real, frequency::Real, phase::Real,
-                  R_ref::Real; species=Species("electron"))
+                  p_over_q_ref::Real; species=Species("electron"))
     T = promote_type(
         eltype(coords),
         typeof(L),
         typeof(voltage),
         typeof(frequency),
         typeof(phase),
-        typeof(R_ref),
+        typeof(p_over_q_ref),
     )
     ele = RFCavity(
         L=T(L),
@@ -126,12 +131,12 @@ function rfcavity(coords, L::Real, voltage::Real, frequency::Real, phase::Real,
         frequency=T(frequency),
         phase=T(phase),
     )
-    return _scibmad_track_ele(T.(coords), ele; species=species, R_ref=T(R_ref))
+    return _scibmad_track_ele(T.(coords), ele; species=species, p_over_q_ref=T(p_over_q_ref))
 end
 
 function rfcavity(coords, L::Real, voltage::Real, frequency::Real, phase::Real;
-                  species=Species("electron"), R_ref=1.0)
-    return rfcavity(coords, L, voltage, frequency, phase, R_ref; species=species)
+                  species=Species("electron"), p_over_q_ref=1.0)
+    return rfcavity(coords, L, voltage, frequency, phase, p_over_q_ref; species=species)
 end
 """
 

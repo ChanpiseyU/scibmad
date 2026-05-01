@@ -122,7 +122,7 @@ def test_gradient_with_multiple_tensor_args():
 
 
 def test_reference_rigidity_positional_arg_keeps_autograd_path():
-    """R_ref can be passed positionally while tensor coordinates stay differentiable."""
+    """p_over_q_ref can be passed positionally while tensor coordinates stay differentiable."""
     coords = torch.tensor(
         [1e-3, 0.0, 1e-3, 0.0, 0.0, 0.0],
         dtype=torch.float64,
@@ -138,15 +138,15 @@ def test_reference_rigidity_positional_arg_keeps_autograd_path():
 
 
 def test_beamline_elements_accept_reference_rigidity():
-    """Element constructors can store R_ref for differentiable beamline tracking."""
+    """Element constructors can store p_over_q_ref for differentiable beamline tracking."""
     coords = torch.tensor(
         [1e-3, 0.0, 1e-3, 0.0, 0.0, 0.0],
         dtype=torch.float64,
         requires_grad=True,
     )
     beamline = scibmad.beamline(
-        scibmad.drift_ele(1.0, R_ref=2.0),
-        scibmad.quadrupole_ele(0.5, 1.2, R_ref=2.0),
+        scibmad.drift(1.0, p_over_q_ref=2.0),
+        scibmad.quadrupole(0.5, 1.2, p_over_q_ref=2.0),
     )
 
     result = beamline(coords)
