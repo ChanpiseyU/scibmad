@@ -1,8 +1,5 @@
 ELEMENT_JULIA_CODE = """
 using SciBmad
-using Beamlines
-using BeamTracking
-using BeamTracking
 
 function _scibmad_track_ele(coords, ele::LineElement;
                             species=Species("electron"), p_over_q_ref=1.0)
