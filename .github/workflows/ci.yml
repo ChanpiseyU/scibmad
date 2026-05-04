@@ -29,12 +29,34 @@ jobs:
 
       - name: Install Julia packages
         run: |
-          python -c "from juliacall import Main as jl; jl.seval('import Pkg; Pkg.add([\"DifferentiationInterface\", \"ForwardDiff\"])')"
+          python - <<'PY'
+          from juliacall import Main as jl
+          jl.seval(
+              '''
+              import Pkg
+              Pkg.Registry.update()
+              Pkg.add([
+                  Pkg.PackageSpec(name="DifferentiationInterface"),
+                  Pkg.PackageSpec(name="ForwardDiff"),
+                  Pkg.PackageSpec(url="https://github.com/bmad-sim/Beamlines.jl"),
+                  Pkg.PackageSpec(url="https://github.com/bmad-sim/BeamTracking.jl"),
+                  Pkg.PackageSpec(url="https://github.com/bmad-sim/SciBmad.jl"),
+              ])
+              '''
+          )
+          PY
       
       - name: Debug
         run: |
           python -c "import sys; print(sys.path)"
           python -c "import scibmad; print('scibmad ok')"
+          python - <<'PY'
+          from juliacall import Main as jl
+          jl.seval("using Beamlines, BeamTracking, SciBmad")
+          print("Beamlines", jl.seval('string(pkgversion(Beamlines))'))
+          print("BeamTracking", jl.seval('string(pkgversion(BeamTracking))'))
+          print("SciBmad", jl.seval('string(pkgversion(SciBmad))'))
+          PY
 
       - name: Run tests
         run: pytest
