@@ -5,7 +5,7 @@ function _scibmad_track_ele(coords, ele::LineElement;
                             species=Species("electron"), p_over_q_ref=1.0)
     T = eltype(coords)
     coordsT = T.(coords)
-    signed_p_over_q_ref = sign(chargeof(species)) * abs(p_over_q_ref)
+    signed_p_over_q_ref = T(sign(chargeof(species)) * abs(p_over_q_ref))
 
     v = Matrix{T}(undef, 1, 6)
     v[1, :] .= coordsT
