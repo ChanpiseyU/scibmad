@@ -11,7 +11,7 @@ function _scibmad_track_ele(coords, ele::LineElement;
     v[1, :] .= coordsT
 
     bl = Beamline([ele]; species_ref=species, p_over_q_ref=signed_p_over_q_ref)
-    bunch = Bunch(v; species=bl.species_ref, p_over_q_ref=bl.p_over_q_ref)
+    bunch = Bunch(v; species=bl.species_ref, p_over_q_ref=bl.p_over_q_ref, t_ref=zero(T))
     track!(bunch, bl)
     return vec(bunch.coords.v[1, :])
 end
