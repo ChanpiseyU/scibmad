@@ -2,11 +2,11 @@
 ## Legendre Polynomial
 
 ``` python
-from scibmad import core as scibmad
+import scibmad as sb
 import torch
 import math
 
-scibmad.define("""
+sb.define("""
 function legendre_p3(x)
     if x isa AbstractArray
         return 0.5 .* (5 .* x.^3 .- 3 .* x)
@@ -28,7 +28,7 @@ optimizer = torch.optim.SGD([a, b, c, d], lr=5e-6)
 
 for i in range(2000):
     optimizer.zero_grad()
-    y_pred = a + b * scibmad.legendre_p3(c + d * x)
+    y_pred = a + b * sb.legendre_p3(c + d * x)
     loss = (y_pred - y).pow(2).sum()
     loss.backward()
     optimizer.step()
@@ -44,11 +44,11 @@ Optimized: a=-0.0000, b=-2.1965, c=0.0000, d=0.2554
 ## Bessel-Like Function Approximation
 
 ``` python
-from scibmad import core as scibmad
+import scibmad as sb
 import torch
 import math
 
-scibmad.define("""
+sb.define("""
 function bessel_approx(x)
     if x isa AbstractArray
         x2 = x.^2
@@ -68,6 +68,13 @@ scale = torch.tensor(1.0, dtype=torch.float64, requires_grad=True)
 shift = torch.tensor(0.0, dtype=torch.float64, requires_grad=True)
 
 optimizer = torch.optim.Adam([scale, shift], lr=1e-2)
+
+for i in range(2000):
+    optimizer.zero_grad()
+    y_pred = scale * sb.bessel_approx(x3 + shift)
+    loss = (y_pred - y3).pow(2).sum()
+    loss.backward()
+    optimizer.step()
 
 ```
 
