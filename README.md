@@ -7,6 +7,7 @@
 - PyTorch tensor to Julia value conversion
 - Autograd-aware wrappers for Julia functions
 - Beamline helpers for SciBmad element tracking
+- A Julia-style object API for screenshot-style beamline workflows
 - A small Python API for loading Julia code into `Main`
 
 ## Requirements
@@ -54,6 +55,40 @@ print(float(x.grad)) # 6.0
 
 ## Beamline Example
 
+The recommended beamline interface mirrors Julia SciBmad closely:
+
+```python
+import scibmad as sb
+import torch
+
+# Make a FODO cell
+qf = sb.Quadrupole(Kn1=0.36, L=0.5)
+d = sb.Drift(L=1.2)
+qd = sb.Quadrupole(Kn1=-0.36, L=0.5)
+
+# 18 GeV electrons
+fodo = sb.Beamline(
+    [qf, d, qd, d],
+    E_ref=18e9,
+    species_ref=sb.Species("electron"),
+)
+
+coords = torch.tensor(
+    [1e-3, 0.0, 1e-3, 0.0, 0.0, 0.0],
+    dtype=torch.float64,
+    requires_grad=True,
+)
+
+qf.Kn1 = torch.tensor(1.2, dtype=torch.float64, requires_grad=True)
+qd.Kn1 = -qf.Kn1
+
+result = sb.track(fodo, v0=coords)
+loss = result.v[0, :4, -1].sum()
+loss.backward()
+```
+
+`scibmad` also keeps the lower-level functional helpers for direct element-by-element tracking:
+
 ```python
 from scibmad import core as scibmad
 import torch
@@ -80,6 +115,7 @@ loss.backward()
 - `scibmad.load(path)` includes a Julia source file
 - `scibmad.seval(code)` evaluates arbitrary Julia expressions
 - `scibmad.using(*packages)` loads Julia packages with `using`
+- `scibmad.Quadrupole(...)`, `scibmad.Drift(...)`, `scibmad.Beamline(...)`, and `scibmad.track(...)` provide a Julia-style beamline API
 - Julia functions defined in `Main` become available as `scibmad.<name>`
 
 ## Development

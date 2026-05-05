@@ -80,7 +80,7 @@ Optimized: scale=0.9993, shift=0.0032
 ## FODO Quadrupole Error Optimization 
 
 ``` python
-from scibmad import core as scibmad
+import scibmad as sb
 import torch
 import numpy as np
 
@@ -98,18 +98,23 @@ target = torch.tensor(
     dtype=torch.float64,
 )
 
-def make_line(kn1):
-    return scibmad.beamline(
-        scibmad.quadrupole(0.5, kn1[0]),
-        scibmad.drift(1.0),
-        scibmad.quadrupole(0.5, kn1[1]),
-        scibmad.drift(1.0),
-    )
+# Make a FODO cell
+qf = sb.Quadrupole(Kn1=model_kn1_np[0], L=0.5)
+d = sb.Drift(L=1.0)
+qd = sb.Quadrupole(Kn1=model_kn1_np[1], L=0.5)
+
+# Reference beamline
+line = sb.Beamline(
+    [qf, d, qd, d],
+    p_over_q_ref=1.0,
+    species_ref=sb.Species("electron"),
+)
 
 def track_particle(coords, kn1):
-    line = make_line(kn1)
-    out = line.track(coords)
-    return out[:4]
+    qf.Kn1 = kn1[0]
+    qd.Kn1 = kn1[1]
+    out = sb.track(line, v0=coords)
+    return out.v[0, :4, -1]
 
 with torch.no_grad():
     target = track_particle(coords0, torch.tensor(real_kn1_np, dtype=torch.float64))

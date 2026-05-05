@@ -155,3 +155,31 @@ def test_beamline_elements_accept_reference_rigidity():
 
     assert coords.grad is not None
     assert torch.all(torch.isfinite(coords.grad))
+
+
+def test_object_style_api_tracks_and_keeps_autograd():
+    """A thin object-style API should support screenshot-style optimization."""
+    qf = scibmad.Quadrupole(Kn1=0.36, L=0.5)
+    d = scibmad.Drift(L=1.2)
+    qd = scibmad.Quadrupole(Kn1=-0.36, L=0.5)
+    line = scibmad.Beamline(
+        [qf, d, qd, d],
+        E_ref=18e9,
+        species_ref=scibmad.Species("electron"),
+    )
+
+    coords = torch.tensor(
+        [1e-3, 0.0, 1e-3, 0.0, 0.0, 0.0],
+        dtype=torch.float64,
+    )
+    k1 = torch.tensor(0.25, dtype=torch.float64, requires_grad=True)
+
+    qf.Kn1 = k1
+    qd.Kn1 = -k1
+    result = scibmad.track(line, v0=coords)
+    loss = result.v[0, :4, -1].sum()
+    loss.backward()
+
+    assert result.v.shape == (1, 6, 2)
+    assert k1.grad is not None
+    assert torch.isfinite(k1.grad)

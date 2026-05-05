@@ -58,5 +58,37 @@ jobs:
           print("SciBmad", jl.seval('string(pkgversion(SciBmad))'))
           PY
 
+      - name: Smoke test Julia-style beamline API
+        run: |
+          python - <<'PY'
+          import scibmad as sb
+          import torch
+
+          torch.set_default_dtype(torch.float64)
+
+          qf = sb.Quadrupole(Kn1=0.36, L=0.5)
+          d = sb.Drift(L=1.2)
+          qd = sb.Quadrupole(Kn1=-0.36, L=0.5)
+          fodo = sb.Beamline(
+              [qf, d, qd, d],
+              E_ref=18e9,
+              species_ref=sb.Species("electron"),
+          )
+
+          coords = torch.tensor([1e-3, 0.0, 1e-3, 0.0, 0.0, 0.0], requires_grad=True)
+          k1 = torch.tensor(0.25, requires_grad=True)
+
+          qf.Kn1 = k1
+          qd.Kn1 = -k1
+
+          result = sb.track(fodo, v0=coords)
+          loss = result.v[0, :4, -1].sum()
+          loss.backward()
+
+          assert result.v.shape == (1, 6, 2)
+          assert k1.grad is not None
+          assert torch.isfinite(k1.grad)
+          PY
+
       - name: Run tests
         run: pytest

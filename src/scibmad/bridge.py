@@ -137,7 +137,25 @@ class _JuliaTorchCallable:
             if isinstance(arg, torch.Tensor)
         ]
 
-        if not kwargs and tensor_arg_indices:
+        if tensor_arg_indices:
+            tensor_kwargs = [
+                name for name, value in kwargs.items()
+                if isinstance(value, torch.Tensor)
+            ]
+            if tensor_kwargs:
+                names = ", ".join(sorted(tensor_kwargs))
+                raise TypeError(
+                    f"Tensor keyword arguments are not supported yet: {names}"
+                )
+
+            if kwargs:
+                bound_kwargs = dict(kwargs)
+
+                def fn_with_kwargs(*bound_args):
+                    return fn(*bound_args, **bound_kwargs)
+
+                return _JuliaFunction.apply(fn_with_kwargs, tuple(tensor_arg_indices), *args)
+
             return _JuliaFunction.apply(fn, tuple(tensor_arg_indices), *args)
 
         return fn(*args, **kwargs)
