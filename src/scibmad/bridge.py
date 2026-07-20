@@ -2,8 +2,17 @@ import numpy as np
 import torch
 from juliacall import Main as jl
 
-
 def _to_julia_input(x):
+    """
+    Converts a torch tensor into a plain value that Julia/juliacall can consume, for use as an argument to a Julia function call
+
+    Arguments:
+    - x: the tensor to convert (tensor is detached before conversion, so Julia does not participate in PyTorch’s forward computation graph)
+
+    Returns:
+    - value: the converted value — a plain Python float if x has a single element, otherwise a flattened 1-D NumPy array
+    - is_scalar_input: True if x had a single element, False otherwise
+    """
     x_np = x.detach().cpu().numpy()
     if x_np.size == 1:
         return float(x_np.item()), True
@@ -11,16 +20,37 @@ def _to_julia_input(x):
 
 
 def _to_numpy_output(result):
+    """
+    Converts a raw value returned from a Julia function call into a NumPy array, tagging whether it was scalar- or vector-valued.
+
+    Arguments:
+    - result: the raw value returned by a Julia function call (typically a Julia scalar or vector, auto-converted by juliacall)
+
+    Returns:
+    - value: the result as a plain Python float (scalar case) or a NumPy array (vector case)
+    - is_vector_output: True if result was vector-valued, False if scalar
+    """
     result_np = np.array(result)
     if result_np.ndim == 0:
         return float(result_np), False
     return result_np, True
 
 
-class _JuliaFunction(torch.autograd.Function):
+class _JuliaFunction(torch.autograd.Function): # Custom torch.autograd.Function 
 
     @staticmethod
     def forward(ctx, julia_func, tensor_arg_indices, *args):
+        """Runs julia_func on args, converting any tensor arguments to Julia-friendly values first, and stashes everything backward will need to compute gradients later
+
+        Arguments:
+        - ctx: the autograd context object PyTorch provides, used to stash state for backward
+        - julia_func: the underlying Julia function (or a Python closure binding one to fixed keyword arguments) to call
+        - tensor_arg_indices: positions within args that are torch.Tensor instances and need conversion/differentiation support; all other positions are passed through to Julia unchanged
+        - *args: the full positional argument list for julia_func, tensor and non-tensor arguments mixed in call order
+
+        Returns:
+        - result: the Julia function's output, converted to a torch.Tensor matching the dtype/device of the first tensor argument
+        """
         tensor_arg_indices = tuple(tensor_arg_indices)
         tensor_args = tuple(args[index] for index in tensor_arg_indices)
 
@@ -54,12 +84,35 @@ class _JuliaFunction(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, grad_output):
+        """
+        Computes the gradient with respect to each tensor argument by calling one of four Julia differentiation helpers then contracts the result against grad_output via the chain rule
+        Runs one full Julia round-trip per differentiable argument
+
+        Arguments:
+        - ctx: the context populated by forward, containing the saved tensors, the Julia function, its full argument list, which positions were tensors, and per-tensor metadata (converted Julia value + scalar/vector flag)
+        - grad_output: the gradient of the final loss with respect to this node's output, supplied by PyTorch
+
+        Returns:
+        - grads: a tuple (None, None, *arg_grads) — None for the two non-tensor leading arguments to forward, followed by one entry per original argument: a gradient tensor for each tensor argument, None for every non-tensor argument
+        """
         tensor_args = ctx.saved_tensors
         backend = jl.backend
         grad_output_np = grad_output.detach().cpu().numpy()
         grad_output_flat = grad_output_np.flatten()
 
         def grad_for_tensor_arg(tensor_arg_index, x):
+            """
+            Computes the gradient for a single tensor argument of the call, by looking up its pre-converted Julia value and scalar/vector flag, 
+            calling the matching Julia differentiation helper (scibmad_derivative_arg / scibmad_gradient_arg / scibmad_jacobian_arg / scibmad_jacobian_scalar_arg),
+            and contracting against grad_output when the output was vector-valued
+
+            Arguments:
+            - tensor_arg_index: the position of this argument within the original call to julia_func
+            - x: the original (saved) tensor argument, used only for its dtype/device/shape on the way out
+
+            Returns:
+            - grad: a torch.Tensor gradient, reshaped to match x's shape
+            """
             metadata = ctx.tensor_metadata[tensor_arg_index]
             jl_x = metadata["jl_x"]
             is_scalar_input = metadata["is_scalar_input"]
@@ -124,13 +177,34 @@ class _JuliaFunction(torch.autograd.Function):
         return None, None, *arg_grads
 
 
-class _JuliaTorchCallable:
+class _JuliaTorchCallable: # wraps Julia-callable so tensor arguments get autograd support, while plain arguments pass straight to Julia with no autograd overhead
+    
     __slots__ = ("_fn",)
 
     def __init__(self, fn):
+        """
+        Stores the wrapped Julia callable
+
+        Arguments:
+        - fn: a Julia function/value (typically a juliacall AnyValue) pulled from the live Julia session
+
+        Returns:
+        - (none)
+        """
         object.__setattr__(self, "_fn", fn)
 
     def __call__(self, *args, **kwargs):
+        """
+        Call the wrapped Julia function, routes through _JuliaFunction.apply for autograd if any positional arg is a Tensor, else calls Julia directly
+        Tensor kwargs aren't supported, apply() only accepts positional args
+
+        Arguments:
+        - *args: positional arguments to forward to the Julia function; any torch.Tensor among these triggers the autograd-aware path
+        - **kwargs: keyword arguments to forward; raises if any value is a torch.Tensor while a positional tensor argument is also present
+
+        Returns:
+        - result: either the raw Julia/NumPy result (no-tensor path) or a differentiable torch.Tensor (tensor path)
+        """
         fn = object.__getattribute__(self, "_fn")
         tensor_arg_indices = [
             index for index, arg in enumerate(args)
@@ -152,6 +226,16 @@ class _JuliaTorchCallable:
                 bound_kwargs = dict(kwargs)
 
                 def fn_with_kwargs(*bound_args):
+                    """
+                    Call fn with bound_args as positional args and bound_kwargs as
+                    fixed keyword args.
+
+                    Args:
+                    *bound_args: Positional (tensor) arguments to differentiate through.
+
+                    Returns:
+                    The result of calling fn(*bound_args, **bound_kwargs).
+                    """
                     return fn(*bound_args, **bound_kwargs)
 
                 return _JuliaFunction.apply(fn_with_kwargs, tuple(tensor_arg_indices), *args)
@@ -161,10 +245,38 @@ class _JuliaTorchCallable:
         return fn(*args, **kwargs)
 
     def __getattr__(self, name):
+        """
+        Forwards attribute lookups to the wrapped Julia function, so a wrapped callable still exposes whatever attributes the underlying Julia value has
+
+        Arguments:
+        - name: the attribute name being looked up
+
+        Returns:
+        - value: the corresponding attribute from the wrapped Julia function
+        """
         return getattr(object.__getattribute__(self, "_fn"), name)
 
     def __setattr__(self, name, value):
+        """
+        Forwards attribute assignment to the wrapped Julia function.
+
+        Arguments:
+        - name: the attribute name being set
+        - value: the value to assign
+
+        Returns:
+        - (none)
+        """
         setattr(object.__getattribute__(self, "_fn"), name, value)
 
     def __repr__(self):
+        """
+        Returns the wrapped Julia function's own repr, rather than a generic wrapper repr, so the wrapping stays invisible when inspecting objects
+
+        Arguments:
+        - (none)
+
+        Returns:
+        - repr_str: the repr of the wrapped Julia function
+        """
         return repr(object.__getattribute__(self, "_fn"))
